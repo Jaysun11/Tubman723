@@ -134,8 +134,12 @@ def check_modbus(packet):
 
 
 
-# Start sniffing the network traffic
-if (not MANUAL):
-    sniff(filter="tcp", prn=check_modbus)
-else:
-    sniff(filter="ip and host " + server_address, prn=check_modbus)
+def main():
+    # Start sniffing the network traffic
+    if (not MANUAL):
+        sniff(filter="tcp", prn=check_modbus)
+    else:
+        sniff(filter="ip and host " + server_address, prn=check_modbus)
+
+if __name__ == "__main__":
+    main()
