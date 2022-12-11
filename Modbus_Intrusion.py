@@ -84,7 +84,7 @@ def check_modbus_validity(packet_data):
     
     # Check for suspicious request parameters
     if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
-        print('Possible Modbus intrusion detected!')
+        print('Possible Modbus intrusion detected! (False packet)')
         packet_data['alert'] = True
         # Alert system administrator and take appropriate action
 
