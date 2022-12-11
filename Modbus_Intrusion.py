@@ -1,4 +1,3 @@
-from sqlite3 import Timestamp
 from scapy.all import *
 import struct
 import datetime
