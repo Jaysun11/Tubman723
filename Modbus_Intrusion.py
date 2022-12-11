@@ -1,3 +1,4 @@
+from sqlite3 import Timestamp
 from scapy.all import *
 import struct
 import datetime
@@ -5,8 +6,34 @@ import datetime
 #if set, the server_address will be used, if not the entire network will be sniffed
 MANUAL = True
 
-#dictionary used to store Modbus Packets
-modbus_packets_processed = {}
+#The time factor (seconds), is the allowable difference in time disparity
+"""
+
+    For example.. If packet 1 came in at 10:00:00, and packet 2 came in at 10:00:30,
+    and packet 3 came in at 10:00:37, the time disparity would be... 23 seconds.
+
+    Formula below
+
+    T1 = 10:00:00
+
+    T2 = 10:00:30
+
+    T3 = 10:00:37
+
+    Tprev = T2 - T1 = 30 seconds
+
+    Tcurr =  T3 - Tprev = 7 seconds
+
+    Tdisp = Tprev - Tcurr
+
+    Tdisp = |30 - 7| = 23 Seconds.
+
+"""
+
+TIME_FACTOR = 2
+
+#list used to store Modbus Packets
+modbus_packets_processed = []
 
 # Define the Socket Details (if MANUAL boolean set)
 server_address = '127.0.0.1'
@@ -46,7 +73,8 @@ def parse_modbus_packet(payload):
         'unit_id': unit_id,
         'function_code': function_code,
         'start_address': start_address,
-        'number_of_registers': number_of_registers
+        'number_of_registers': number_of_registers,
+        'alert': False
     }
 
     print_packet_details(packet_data)
@@ -57,8 +85,26 @@ def check_modbus_validity(packet_data):
     # Check for suspicious request parameters
     if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
         print('Possible Modbus intrusion detected!')
+        packet_data['alert'] = True
         # Alert system administrator and take appropriate action
 
+    #calculate time disparity, if too short, could be a MITM attack
+    check_time_disparity()
+    
+
+def check_time_disparity():
+    if (len(modbus_packets_processed) >=3):
+        last_3_packets = modbus_packets_processed[-3:]
+        T1 = last_3_packets[0]['timestamp'].total_seconds()
+        T2 = last_3_packets[1]['timestamp'].total_seconds()
+        T3 = last_3_packets[2]['timestamp'].total_seconds()
+        Tprev = T2 - T1
+        Tcurr = T3 - T2
+        Tdisp = abs(Tprev - Tcurr)
+        
+        if (Tdisp > TIME_FACTOR):
+            last_3_packets[2]['alert'] = True
+            print('Possible Modbus intrusion detected (MITM)!')
 
 
 
