@@ -1,33 +1,66 @@
+from scapy.all import *
 import struct
-import socket
+
+# Define the Socket Details (if MANUAL boolean set)
+server_address = '192.168.1.114'
+
+MANUAL = False
+
+def print_packet_details(slave_id, function_code, start_address, num_registers):
+    #print packet details
+    print("Modbus Packet Details")
+    print(slave_id)
+    print(function_code)
+    print(start_address)
+    print(num_registers)
+
+def parse_modbus_packet(payload):
+
+    slave_id = struct.unpack('>B', payload[6:7])[0]
+    function_code = struct.unpack('>B', payload[7:8])[0]
+    start_address = struct.unpack('>H', payload[8:10])[0]
+    num_registers = struct.unpack('>H', payload[10:12])[0]
+
+    print_packet_details(slave_id, function_code, start_address, num_registers)
+    check_modbus_validity(slave_id, function_code, start_address, num_registers)
+
+def check_modbus_validity(slave_id, function_code, start_address, num_registers):     
+    
+    # Check for suspicious request parameters
+    if (slave_id < 1 or slave_id > 247) or (function_code < 1 or function_code > 127) or (start_address < 0 or start_address > 65535) or (num_registers < 1 or num_registers > 125):
+        print('Possible Modbus intrusion detected!')
+        # Alert system administrator and take appropriate action
 
 
-# Define the Modbus Details
-server_address = '192.168.1.???'
-server_port = 502
 
-# Create a TCP socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Connect to Modbus server
-s.connect((server_address, server_port))
+# Create a packet callback function
+def check_modbus(packet):
+    
+    # If the packet has a TCP layer, check if it is a Modbus TCP packet
+    if packet.haslayer(TCP):
+        # Extract the TCP payload
+        payload = packet[TCP].payload
 
-#This will run forever to monitor for problematic packets.
-while True:
-    # Get the data from a server and store it in the data variable
-    data = s.recv(1024)
-    #print the data
-    print(data)
+        # If the payload is not None, try to read the Modbus packet
+        if payload is not None:
+            try:
 
-    # Check if data is a Modbus request
-    if len(data) >= 12 and struct.unpack('>B', data[7:8])[0] == 3:
-        # Parse Modbus request
-        slave_id = struct.unpack('>B', data[6:7])[0]
-        function_code = struct.unpack('>B', data[7:8])[0]
-        start_address = struct.unpack('>H', data[8:10])[0]
-        num_registers = struct.unpack('>H', data[10:12])[0]
+                print('Payload Recieved, has TCP header, checking if it was a Modbus request')
+        
+                # Check if data is a Modbus request by looking at attributes of payload
+                if len(payload) >= 12 and struct.unpack('>B', payload[7:8])[0] == 3:
+                    print("here")
+                    parse_modbus_packet(payload)                
+                    
+            except:
+                #Packet was not a TCP Packet, cant be modbus so PASS
+                pass
 
-        # Check for suspicious request parameters
-        if (slave_id < 1 or slave_id > 247) or (function_code < 1 or function_code > 127) or (start_address < 0 or start_address > 65535) or (num_registers < 1 or num_registers > 125):
-            print('Possible Modbus intrusion detected!')
-            # Alert system administrator and take appropriate action
+
+
+# Start sniffing the network traffic
+if (not MANUAL):
+    sniff(prn=check_modbus)
+else:
+    sniff(filter="ip and host " + server_address, prn=check_modbus)
