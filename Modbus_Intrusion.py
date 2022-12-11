@@ -3,13 +3,13 @@ import struct
 import datetime
 
 #if set, the server_address will be used, if not the entire network will be sniffed
-MANUAL = False
+MANUAL = True
 
 #dictionary used to store Modbus Packets
 modbus_packets_processed = {}
 
 # Define the Socket Details (if MANUAL boolean set)
-server_address = '192.168.1.114'
+server_address = '127.0.0.1'
 
 # Get current time in iso format
 def get_iso_time():
@@ -17,13 +17,10 @@ def get_iso_time():
     return local_timezone
 
 
-def print_packet_details(slave_id, function_code, start_address, num_registers):
+def print_packet_details(packet_data):
     #print packet details
     print("Processing Packet Details")
-    print(slave_id)
-    print(function_code)
-    print(start_address)
-    print(num_registers)
+    print(packet_data)
 
 def parse_modbus_packet(payload):
 
@@ -38,7 +35,7 @@ def parse_modbus_packet(payload):
     # Parse Modbus Data ADU
     function_code = struct.unpack('>B', payload[7:8])[0]
     start_address = struct.unpack('>H', payload[8:10])[0]
-    num_registers = struct.unpack('>H', payload[10:12])[0]
+    number_of_registers = struct.unpack('>H', payload[10:12])[0]
 
     #store packet in a dictionary with current time
     packet_data =  {
@@ -49,16 +46,16 @@ def parse_modbus_packet(payload):
         'unit_id': unit_id,
         'function_code': function_code,
         'start_address': start_address,
-        'number_of_registers': num_registers
+        'number_of_registers': number_of_registers
     }
 
     print_packet_details(packet_data)
     check_modbus_validity(packet_data)
 
-def check_modbus_validity(slave_id, function_code, start_address, num_registers):     
+def check_modbus_validity(packet_data):     
     
     # Check for suspicious request parameters
-    if (slave_id < 1 or slave_id > 247) or (function_code < 1 or function_code > 127) or (start_address < 0 or start_address > 65535) or (num_registers < 1 or num_registers > 125):
+    if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
         print('Possible Modbus intrusion detected!')
         # Alert system administrator and take appropriate action
 
@@ -96,4 +93,4 @@ def check_modbus(packet):
 if (not MANUAL):
     sniff(filter="tcp", prn=check_modbus)
 else:
-    sniff(filter="ip and host " + server_address + " tcp", prn=check_modbus)
+    sniff(filter="ip and host " + server_address, prn=check_modbus)
