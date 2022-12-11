@@ -36,7 +36,6 @@ TIME_FACTOR = 2
 #This is used to identify a DOS attack
 CONNECTION_THRESHOLD = 60
 TIME_PERIOD = 60  # seconds
-ip_counter = {}
 
 
 #list used to store Modbus Packets
@@ -74,6 +73,7 @@ def parse_modbus_packet(payload, source_IP_ADDRESS):
     #store packet in a dictionary with current time
     packet_data =  {
         'timestamp': get_iso_time(),
+        'origin_ip': source_IP_ADDRESS,
         'transaction_id': transaction_id,
         'protocol_id': protocol_id,
         'length': length,
@@ -85,9 +85,9 @@ def parse_modbus_packet(payload, source_IP_ADDRESS):
     }
 
     print_packet_details(packet_data)
-    check_modbus_validity(packet_data, source_IP_ADDRESS)
+    check_modbus_validity(packet_data)
 
-def check_modbus_validity(packet_data, source_IP_ADDRESS):     
+def check_modbus_validity(packet_data):     
     
     # Check for suspicious request parameters
     if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
@@ -98,10 +98,11 @@ def check_modbus_validity(packet_data, source_IP_ADDRESS):
     #calculate time disparity, if too short, could be a MITM attack
     check_time_disparity()
     
-    check_if_first_time_origin(packet_data, source_IP_ADDRESS)
+    check_if_first_time_origin(packet_data)
     
-def check_if_first_time_origin(packet_data, source_IP_ADDRESS):
-    if(ip_counter[source_IP_ADDRESS] == 1):
+def check_if_first_time_origin(packet_data):
+    global ip_counter
+    if(ip_counter[packet_data['origin_ip']] == 1):
         print('Possible Modbus intrusion detected! (First time recieved from origin)')
         packet_data['alert'] = True
 
@@ -128,6 +129,7 @@ def check_time_disparity():
 # Create a packet callback function
 def check_modbus(packet):
     global start_time
+    global ip_counter
 
     #check IP
     source_IP_ADDRESS = packet[IP].src
@@ -185,5 +187,7 @@ def main():
 
 if __name__ == "__main__":
     global start_time
+    global ip_counter
+    ip_counter = {}
     start_time = time.time()
     main()
