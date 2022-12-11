@@ -1,6 +1,7 @@
 from scapy.all import *
 import struct
 import datetime
+import time
 
 #if set, the server_address will be used, if not the entire network will be sniffed
 MANUAL = True
@@ -31,6 +32,13 @@ MANUAL = True
 
 TIME_FACTOR = 2
 
+# Set the threshold for the number of connections within a certain time period
+#This is used to identify a DOS attack
+CONNECTION_THRESHOLD = 60
+TIME_PERIOD = 60  # seconds
+ip_counter = {}
+
+
 #list used to store Modbus Packets
 modbus_packets_processed = []
 
@@ -48,7 +56,7 @@ def print_packet_details(packet_data):
     print("Processing Packet Details")
     print(packet_data)
 
-def parse_modbus_packet(payload):
+def parse_modbus_packet(payload, source_IP_ADDRESS):
 
     print('12 Byte payload recieved, verifying format...')
 
@@ -77,9 +85,9 @@ def parse_modbus_packet(payload):
     }
 
     print_packet_details(packet_data)
-    check_modbus_validity(packet_data)
+    check_modbus_validity(packet_data, source_IP_ADDRESS)
 
-def check_modbus_validity(packet_data):     
+def check_modbus_validity(packet_data, source_IP_ADDRESS):     
     
     # Check for suspicious request parameters
     if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
@@ -90,6 +98,12 @@ def check_modbus_validity(packet_data):
     #calculate time disparity, if too short, could be a MITM attack
     check_time_disparity()
     
+    check_if_first_time_origin(packet_data, source_IP_ADDRESS)
+    
+def check_if_first_time_origin(packet_data, source_IP_ADDRESS):
+    if(ip_counter[source_IP_ADDRESS] == 1):
+        print('Possible Modbus intrusion detected! (First time recieved from origin)')
+        packet_data['alert'] = True
 
 def check_time_disparity():
     if (len(modbus_packets_processed) >=3):
@@ -105,10 +119,38 @@ def check_time_disparity():
             last_3_packets[2]['alert'] = True
             print('Possible Modbus intrusion detected (MITM)!')
 
+        
+
+    
+
 
 
 # Create a packet callback function
 def check_modbus(packet):
+    global start_time
+
+    #check IP
+    source_IP_ADDRESS = packet[IP].src
+
+    #Record that IP
+
+    if source_IP_ADDRESS in ip_counter:
+        # Exists - Add 1 to the IP Count
+        ip_counter[source_IP_ADDRESS] += 1
+    else:
+        # Doesn't exist - Set the value to 1 as this is the first occurence.
+        ip_counter[source_IP_ADDRESS] = 1
+
+    #reset values after time threshold    
+    if (start_time - time.time() > TIME_PERIOD):
+        start_time = time.time()
+        ip_counter = {}
+
+    else:
+        if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
+            #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
+            print("Warning! Possible DOS attack")
+
     
     # If the packet has a TCP layer, check if it is a Modbus TCP packet
     if packet.haslayer(TCP):
@@ -126,7 +168,7 @@ def check_modbus(packet):
                         If the payload is 12 bytes long it is quite likely a modbus packet
                         Parse the packet to verify
                     """
-                    parse_modbus_packet(payload)                
+                    parse_modbus_packet(payload, source_IP_ADDRESS)                
 
             except:
                 #Packet was not a TCP Packet, cant be modbus so PASS
@@ -142,4 +184,6 @@ def main():
         sniff(filter="ip and host " + server_address, prn=check_modbus)
 
 if __name__ == "__main__":
+    global start_time
+    start_time = time.time()
     main()
