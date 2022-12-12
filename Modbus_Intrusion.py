@@ -4,7 +4,7 @@ import datetime
 import time
 
 #if set, the server_address will be used, if not the entire network will be sniffed
-MANUAL = True
+MANUAL = False
 
 #The time factor (seconds), is the allowable difference in time disparity
 """
@@ -34,12 +34,8 @@ TIME_FACTOR = 2
 
 # Set the threshold for the number of connections within a certain time period
 #This is used to identify a DOS attack
-CONNECTION_THRESHOLD = 60
+CONNECTION_THRESHOLD = 6000
 TIME_PERIOD = 60  # seconds
-
-
-#list used to store Modbus Packets
-modbus_packets_processed = []
 
 # Define the Socket Details (if MANUAL boolean set)
 server_address = '127.0.0.1'
@@ -58,9 +54,11 @@ def print_packet_details(packet_data):
 def parse_modbus_packet(payload, source_IP_ADDRESS):
 
     print('12 Byte payload recieved, verifying format...')
+    payload = bytes(payload)
 
     # Parse Modbus TCP information
-    transaction_id = struct.unpack('>H', payload[0:2])[0]
+
+    transaction_id = struct.unpack('>H', bytes(payload[0:2]))[0]
     protocol_id = struct.unpack('>H', payload[2:4])[0]
     length = struct.unpack('>H', payload[4:6])[0]
     unit_id = struct.unpack('>B', payload[6:7])[0]
@@ -84,8 +82,8 @@ def parse_modbus_packet(payload, source_IP_ADDRESS):
         'alert': False
     }
 
-    print_packet_details(packet_data)
     check_modbus_validity(packet_data)
+    print_packet_details(packet_data)
 
 def check_modbus_validity(packet_data):     
     
@@ -94,47 +92,70 @@ def check_modbus_validity(packet_data):
         print('Possible Modbus intrusion detected! (False packet)')
         packet_data['alert'] = True
         # Alert system administrator and take appropriate action
+    else:
+        #Valid Modbus packet, check for warnings
 
-    #calculate time disparity, if too short, could be a MITM attack
-    check_time_disparity()
+        #Record that IP
+        record_IP(packet_data['origin_ip'])
+
+        #calculate time disparity, if too short, could be a MITM attack
+        record_packet(packet_data)
+        check_time_disparity()
+        
+        check_if_first_time_origin(packet_data)
     
-    check_if_first_time_origin(packet_data)
-    
+def record_packet(packet_data):
+    global modbus_packets_processed
+    modbus_packets_processed.append(packet_data)
+
 def check_if_first_time_origin(packet_data):
     global ip_counter
+
     if(ip_counter[packet_data['origin_ip']] == 1):
         print('Possible Modbus intrusion detected! (First time recieved from origin)')
         packet_data['alert'] = True
 
+def remove_up_to_character(string, character):
+    # Find the index of the first occurrence of the character in the string
+    index = string.find(character)
+
+    # If the character is not found, return the original string
+    if index == -1:
+        return string
+
+    # Return the string with all characters up to the first occurrence of the character removed
+    return string[index + 1:]
+
 def check_time_disparity():
+    global modbus_packets_processed
+
     if (len(modbus_packets_processed) >=3):
         last_3_packets = modbus_packets_processed[-3:]
-        T1 = last_3_packets[0]['timestamp'].total_seconds()
-        T2 = last_3_packets[1]['timestamp'].total_seconds()
-        T3 = last_3_packets[2]['timestamp'].total_seconds()
-        Tprev = T2 - T1
-        Tcurr = T3 - T2
-        Tdisp = abs(Tprev - Tcurr)
         
-        if (Tdisp > TIME_FACTOR):
-            last_3_packets[2]['alert'] = True
-            print('Possible Modbus intrusion detected (MITM)!')
+        try:
+            T1 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[0]['timestamp'], "T"),'%H:%M:%S')
+            T2 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[1]['timestamp'], "T"),'%H:%M:%S')
+            T3 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[2]['timestamp'], "T"),'%H:%M:%S')
+            Tprev = (T2 - T1).total_seconds()
+            Tcurr = (T3 - T2).total_seconds()
+            Tdisp = abs(Tprev - Tcurr)
+
+            print("TDiSP: ", Tdisp)
+        
+            if (Tdisp > TIME_FACTOR):
+                last_3_packets[2]['alert'] = True
+                print('Possible Modbus intrusion detected (MITM)!')
+
+        except Exception as e:
+            print(e)
+        
 
         
 
-    
+        
 
-
-
-# Create a packet callback function
-def check_modbus(packet):
-    global start_time
+def record_IP(source_IP_ADDRESS):
     global ip_counter
-
-    #check IP
-    source_IP_ADDRESS = packet[IP].src
-
-    #Record that IP
 
     if source_IP_ADDRESS in ip_counter:
         # Exists - Add 1 to the IP Count
@@ -143,15 +164,27 @@ def check_modbus(packet):
         # Doesn't exist - Set the value to 1 as this is the first occurence.
         ip_counter[source_IP_ADDRESS] = 1
 
+        
+# Create a packet callback function
+def check_modbus(packet):
+    global start_time
+    global ip_counter
+
+    #check IP
+    source_IP_ADDRESS = packet[IP].src
+
     #reset values after time threshold    
     if (start_time - time.time() > TIME_PERIOD):
         start_time = time.time()
         ip_counter = {}
 
     else:
-        if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
-            #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
-            print("Warning! Possible DOS attack")
+        try:
+            if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
+                #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
+                print("Warning! Possible DOS attack")
+        except KeyError:
+            pass
 
     
     # If the packet has a TCP layer, check if it is a Modbus TCP packet
@@ -170,6 +203,7 @@ def check_modbus(packet):
                         If the payload is 12 bytes long it is quite likely a modbus packet
                         Parse the packet to verify
                     """
+
                     parse_modbus_packet(payload, source_IP_ADDRESS)                
 
             except:
@@ -188,6 +222,9 @@ def main():
 if __name__ == "__main__":
     global start_time
     global ip_counter
+    global modbus_packets_processed
+
+    modbus_packets_processed = []
     ip_counter = {}
     start_time = time.time()
     main()
