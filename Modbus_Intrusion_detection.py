@@ -34,7 +34,7 @@ TIME_FACTOR = 2
 
 # Set the threshold for the number of connections within a certain time period
 #This is used to identify a DOS attack
-CONNECTION_THRESHOLD = 1000
+CONNECTION_THRESHOLD = 100
 TIME_PERIOD = 60  # seconds
 
 # Define the Socket Details (if MANUAL boolean set)
