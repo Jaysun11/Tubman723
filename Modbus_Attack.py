@@ -7,7 +7,7 @@ import time
 import random
 
 
-functions = [False_Packet_Attack, begin_flood, mitm_attack]
+
 
 logging.basicConfig()
 log = logging.getLogger()
@@ -48,10 +48,11 @@ def mitm_attack():
     with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
         f.write(str(time.time()) + "\n")  # write the current timestamp to the file then a new line
 
+functions = [False_Packet_Attack, begin_flood, mitm_attack]
+
 while True:
     # Generate a random interval between 1 seconds and 30 seconds
     random_interval = random.uniform(20, 60)
     print(f"Interval generated... Waiting {random_interval:.2f} seconds before running attack")
     time.sleep(random_interval)
-    func = random.choice(functions)
-    func()
+    random.choice(functions)()
