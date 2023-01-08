@@ -50,7 +50,7 @@ def mitm_attack():
 
 while True:
     # Generate a random interval between 1 seconds and 30 seconds
-    random_interval = random.uniform(1, 60)
+    random_interval = random.uniform(20, 60)
     print(f"Interval generated... Waiting {random_interval:.2f} seconds before running attack")
     time.sleep(random_interval)
     func = random.choice(functions)
