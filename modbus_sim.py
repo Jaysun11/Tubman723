@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 
 from pymodbus.client.sync import ModbusSerialClient as ModbusClient
-import logging
 
 import time
-
-
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 client = ModbusClient(method='rtu', port='/dev/ttyUSB0', stopbits = 1, bytesize = 8, parity = 'N', baudrate= 9600)
 client.connect()
