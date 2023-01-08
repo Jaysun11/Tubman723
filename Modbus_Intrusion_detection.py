@@ -34,7 +34,7 @@ TIME_FACTOR = 2
 
 # Set the threshold for the number of connections within a certain time period
 #This is used to identify a DOS attack
-CONNECTION_THRESHOLD = 100
+CONNECTION_THRESHOLD = 1000
 TIME_PERIOD = 60  # seconds
 
 # Define the Socket Details (if MANUAL boolean set)
@@ -90,6 +90,8 @@ def check_modbus_validity(packet_data):
     # Check for suspicious request parameters
     if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
         print('Possible Modbus intrusion detected! (False packet)')
+        with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+            f.write("FALSE PACKET ATTACK DETECTED: " + str(time.time()) + "\n")  # write the current timestamp to the file then a new line
         packet_data['alert'] = True
         # Alert system administrator and take appropriate action
     else:
@@ -113,6 +115,8 @@ def check_if_first_time_origin(packet_data):
 
     if(ip_counter[packet_data['origin_ip']] == 1):
         print('Possible Modbus intrusion detected! (First time recieved from origin)')
+        with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+            f.write("MITM (FIRST TIME) ATTACK DETECTED: " + str(time.time()) + "\n")  # write the current timestamp to the file then a new line
         packet_data['alert'] = True
 
 def remove_up_to_character(string, character):
@@ -145,6 +149,8 @@ def check_time_disparity():
             if (Tdisp > TIME_FACTOR):
                 last_3_packets[2]['alert'] = True
                 print('Possible Modbus intrusion detected (MITM)!')
+                with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+                    f.write("MITM ATTACK DETECTED: " + str(time.time()) + "\n")  # write the current timestamp to the file then a new line
 
         except Exception as e:
             print(e)
@@ -183,6 +189,8 @@ def check_modbus(packet):
             if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
                 #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
                 print("Warning! Possible DOS attack")
+                with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+                    f.write("DOS ATTACK DETECTED: " + str(time.time()) + "\n")  # write the current timestamp to the file then a new line
         except KeyError:
             pass
 

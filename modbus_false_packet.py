@@ -14,10 +14,13 @@ log.setLevel(logging.DEBUG)
 def send_command():
     client = ModbusClient(method='rtu', port='/dev/ttyUSB0',stopbits = 1, bytesize = 8, parity = 'N', baudrate= 9600)
     client.connect()
-    client.read_input_registers(1, 21, unit=20)
+    try:
+        client.read_input_registers(1, 2100, unit=20)
+    except:
+        pass
 
     print("Time Stamp: " + time.time())
-    with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+    with open("modbus_false_packet.txt", "a") as f:  # open the file in append mode
         f.write(str(time.time()) + "\n")  # write the current timestamp to the file then a new line
 
 
