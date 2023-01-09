@@ -1,6 +1,6 @@
 from scapy.all import *
 import struct
-import datetime
+from datetime import datetime
 import time
 
 #if set, the server_address will be used, if not the entire network will be sniffed
