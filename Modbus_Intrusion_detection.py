@@ -42,7 +42,7 @@ server_address = '127.0.0.1'
 
 # Get current time in iso format
 def get_iso_time():
-    local_timezone = datetime.datetime.now().replace(microsecond=0).isoformat()
+    local_timezone = datetime.now().replace(microsecond=0).isoformat()
     return local_timezone
 
 
@@ -55,7 +55,6 @@ def parse_modbus_packet(payload, source_IP_ADDRESS):
 
     print('12 Byte payload recieved, verifying format...')
     payload = bytes(payload)
-
     # Parse Modbus TCP information
 
     transaction_id = struct.unpack('>H', bytes(payload[0:2]))[0]
@@ -96,7 +95,7 @@ def check_modbus_validity(packet_data):
         print("Number Of Registers : " + str(packet_data['number_of_registers']))
 
         
-        with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+        with open("modbus_false_packet_detected.txt", "a") as f:  # open the file in append mode
             f.write("FALSE PACKET ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
             # Get the current date and time
             now = datetime.now()
@@ -130,7 +129,7 @@ def check_if_first_time_origin(packet_data):
 
     if(ip_counter[packet_data['origin_ip']] == 1):
         print('Possible Modbus intrusion detected! (First time recieved from origin)')
-        with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+        with open("modbus_mitm_detected.txt", "a") as f:  # open the file in append mode
             f.write("MITM (FIRST TIME) ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
             # Get the current date and time
             now = datetime.now()
@@ -171,7 +170,7 @@ def check_time_disparity():
             if (Tdisp > TIME_FACTOR):
                 last_3_packets[2]['alert'] = True
                 print('Possible Modbus intrusion detected (MITM)!')
-                with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+                with open("modbus_mitm_detected.txt", "a") as f:  # open the file in append mode
                     f.write("MITM ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
                     # Get the current date and time
                     now = datetime.now()
@@ -218,7 +217,7 @@ def check_modbus(packet):
             if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
                 #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
                 print("Warning! Possible DOS attack")
-                with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
+                with open("modbus_dos_detected.txt", "a") as f:  # open the file in append mode
                     f.write("DOS ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
                      # Get the current date and time
                     now = datetime.now()
