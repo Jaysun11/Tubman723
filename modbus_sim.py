@@ -11,7 +11,7 @@ client.connect()
 
 while True:
     time.sleep(3)
-    rr = client.read_input_registers(0, 10)
+    rr = client.read_input_registers(0, 10, unit=1)
     with open("modbus_sim.txt", "a") as f:  # open the file in append mode
         if (rr):
             #If there was a returned response (success)
