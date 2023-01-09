@@ -88,8 +88,14 @@ def parse_modbus_packet(payload, source_IP_ADDRESS):
 def check_modbus_validity(packet_data):     
     
     # Check for suspicious request parameters
-    if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['start_address'] < 1 or packet_data['number_of_registers'] > 125):
+    if (packet_data['unit_id'] < 1 or packet_data['unit_id'] > 247) or (packet_data['function_code'] < 1 or packet_data['function_code']  > 127) or (packet_data['start_address']  < 0 or packet_data['start_address'] > 65535) or (packet_data['number_of_registers'] < 1 or packet_data['number_of_registers'] > 125):
         print('Possible Modbus intrusion detected! (False packet)')
+        print("Unit ID: " + str(packet_data['unit_id']))
+        print("Function Code : " + str(packet_data['unit_id']))
+        print("Start Address: " + str(packet_data['unit_id']))
+        print("Number Of Registers : " + str(packet_data['number_of_registers']))
+
+        
         with open("modbus_mitm.txt", "a") as f:  # open the file in append mode
             f.write("FALSE PACKET ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
             # Get the current date and time
