@@ -112,12 +112,14 @@ def check_modbus_validity(packet_data):
 
         #Record that IP
         record_IP(packet_data['origin_ip'])
-
+        sys.stdout.flush()
         #calculate time disparity, if too short, could be a MITM attack
         record_packet(packet_data)
+        sys.stdout.flush()
         check_time_disparity()
-        
+        sys.stdout.flush()
         check_if_first_time_origin(packet_data)
+        sys.stdout.flush()
     
 def record_packet(packet_data):
     global modbus_packets_processed

