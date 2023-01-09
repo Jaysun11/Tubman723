@@ -203,6 +203,7 @@ def record_IP(source_IP_ADDRESS):
 def check_modbus(packet):
     global start_time
     global ip_counter
+    global dos_warning
 
     #check IP
     source_IP_ADDRESS = packet[IP].src
@@ -211,12 +212,14 @@ def check_modbus(packet):
     if (start_time - time.time() > TIME_PERIOD):
         start_time = time.time()
         ip_counter = {}
+        dos_warning = False
 
     else:
         try:
-            if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD):
+            if (ip_counter[source_IP_ADDRESS] >= CONNECTION_THRESHOLD and dos_warning == False):
                 #If there has CONNECTION_THRESHOLD to many connections in the last TIME_THRESHOLD seconds.
                 print("Warning! Possible DOS attack")
+                dos_warning = True
                 with open("modbus_dos_detected.txt", "a") as f:  # open the file in append mode
                     f.write("DOS ATTACK DETECTED: \n")  # write the current timestamp to the file then a new line
                      # Get the current date and time
@@ -266,6 +269,8 @@ if __name__ == "__main__":
     global start_time
     global ip_counter
     global modbus_packets_processed
+    global dos_warning
+    dos_warning = False
 
     modbus_packets_processed = []
     ip_counter = {}
