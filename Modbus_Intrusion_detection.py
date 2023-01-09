@@ -158,9 +158,9 @@ def check_time_disparity():
         last_3_packets = modbus_packets_processed[-3:]
         
         try:
-            T1 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[0]['timestamp'], "T"),'%H:%M:%S')
-            T2 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[1]['timestamp'], "T"),'%H:%M:%S')
-            T3 = datetime.datetime.strptime(remove_up_to_character(last_3_packets[2]['timestamp'], "T"),'%H:%M:%S')
+            T1 = datetime.strptime(remove_up_to_character(last_3_packets[0]['timestamp'], "T"),'%H:%M:%S')
+            T2 = datetime.strptime(remove_up_to_character(last_3_packets[1]['timestamp'], "T"),'%H:%M:%S')
+            T3 = datetime.strptime(remove_up_to_character(last_3_packets[2]['timestamp'], "T"),'%H:%M:%S')
             Tprev = (T2 - T1).total_seconds()
             Tcurr = (T3 - T2).total_seconds()
             Tdisp = abs(Tprev - Tcurr)
